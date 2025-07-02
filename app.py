@@ -1,41 +1,43 @@
 import streamlit as st
 import pandas as pd
-from pycaret.regression import setup, compare_models, predict_model, pull
-import tempfile
-import os
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 
-st.set_page_config(page_title="Previsão com IA", layout="wide")
+st.set_page_config(page_title="Mini Previsor IA", layout="centered")
+st.title("🔮 Previsão Automática com IA")
 
-st.title("🔮 Plataforma de Previsão com IA")
-st.markdown("Suba seus dados, escolha a variável a ser prevista, e obtenha predições automáticas com Machine Learning.")
+uploaded_file = st.file_uploader("📁 Envie um arquivo CSV", type="csv")
 
-uploaded_file = st.file_uploader("📁 Faça upload do seu arquivo CSV", type="csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.subheader("🔍 Prévia dos dados")
+    st.dataframe(df.head())
 
-if uploaded_file is not None:
-    try:
-        df = pd.read_csv(uploaded_file)
-        st.subheader("Pré-visualização dos dados:")
-        st.dataframe(df.head())
+    target = st.selectbox("🎯 Qual variável você quer prever?", df.columns)
 
-        target = st.selectbox("🎯 Escolha a variável que deseja prever", df.columns)
+    if st.button("🚀 Rodar previsão"):
+        try:
+            X = df.drop(columns=[target])
+            y = df[target]
 
-        if st.button("🚀 Gerar Previsões"):
-            with st.spinner("Treinando modelo..."):
-                # Criar um diretório temporário para evitar conflitos de sessão
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    os.chdir(temp_dir)
-                    setup(data=df, target=target, silent=True, session_id=42)
-                    best_model = compare_models()
-                    resultados = predict_model(best_model)
+            # Remove colunas não numéricas automaticamente
+            X = X.select_dtypes(include=["number"])
 
-                st.success("Modelo treinado com sucesso!")
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            model = RandomForestRegressor()
+            model.fit(X_train, y_train)
 
-                st.subheader("🔍 Resultados com predições:")
-                st.dataframe(resultados[[target, "Label"]].rename(columns={"Label": "Previsão"}))
+            y_pred = model.predict(X_test)
+            rmse = mean_squared_error(y_test, y_pred, squared=False)
 
-                st.subheader("📊 Importância das variáveis:")
-                interpret_df = pull()
-                st.dataframe(interpret_df)
+            st.success(f"Modelo treinado com sucesso! RMSE: {rmse:.2f}")
 
-    except Exception as e:
-        st.error(f"Ocorreu um erro ao processar o arquivo: {e}")
+            st.subheader("🔎 Amostra de Previsões")
+            preview = X_test.copy()
+            preview["Real"] = y_test.values
+            preview["Previsto"] = y_pred
+            st.dataframe(preview.head(10))
+
+        except Exception as e:
+            st.error(f"Erro: {e}")
