@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from math import sqrt
 
 st.title("🔮 Previsor Simples com Machine Learning")
 
@@ -16,7 +17,7 @@ if uploaded_file:
     colunas_numericas = df.select_dtypes(include=["number"]).columns
 
     if len(colunas_numericas) < 2:
-        st.warning("O CSV precisa ter pelo menos duas colunas numéricas para funcionar.")
+        st.warning("⚠️ O CSV precisa ter pelo menos duas colunas numéricas para funcionar.")
     else:
         target = st.selectbox("🎯 Qual variável você quer prever?", colunas_numericas)
 
@@ -25,7 +26,7 @@ if uploaded_file:
                 X = df.drop(columns=[target])
                 y = df[target]
 
-                # Filtra somente colunas numéricas para evitar erro
+                # Remove colunas não numéricas
                 X = X.select_dtypes(include=["number"])
 
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -34,7 +35,7 @@ if uploaded_file:
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
 
-                rmse = mean_squared_error(y_test, y_pred, squared=False)
+                rmse = sqrt(mean_squared_error(y_test, y_pred))
                 st.success(f"✅ Modelo treinado com sucesso! RMSE: {rmse:.2f}")
 
                 st.subheader("🔍 Amostra de Previsões")
@@ -44,4 +45,4 @@ if uploaded_file:
                 st.dataframe(preview.head())
 
             except Exception as e:
-                st.error(f"Erro ao treinar o modelo: {e}")
+                st.error(f"❌ Erro ao treinar o modelo: {e}")
